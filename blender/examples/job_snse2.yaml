@@ -1,0 +1,88 @@
+# Phonon Vision — example job (YAML authoring layer, Phase 2).
+# Render this with the outer launcher:
+#     python tools/pv_render.py examples/job_snse2.yaml --blender /opt/blender-4.5/blender
+# YAML supports comments; the launcher converts it to JSON for the headless run.
+# Schema: docs/job_schema_v1.md.
+
+schema_version: 1
+
+input:
+  # EDIT THIS to the absolute path of your SnSe2 band file (.yaml or .hdf5).
+  file: /ABSOLUTE/PATH/TO/2d_SnSe2_band.yaml
+
+display:
+  q_index: 0
+  band_index: 5            # which band to animate
+  amplitude: 0.6           # displacement amplitude (Å)
+  clamp_amplitude: false
+  max_displacement: 1.0
+  canonical_phase: true
+  imaginary_threshold: -0.01
+  supercell: [3, 3, 1]     # 2D cell: tile in-plane only, 1 layer out-of-plane
+  mesh_quality: HIGH       # build-time tessellation (LOW/MEDIUM/HIGH)
+  show_arrows: true
+  arrow_scale: 1.2
+  show_unit_cell: true
+  unit_cell_kind: PRIMITIVE
+  cell_thickness: 0.02
+  show_bonds: true
+  bonds_across_pbc: true   # show atoms & bonds across periodic boundaries
+  bond_tolerance: 0.15
+  bond_thickness: 0.06
+  bond_two_color: true
+  bond_max_distance_factor: 1.2
+  bond_min_distance_factor: 0.4
+
+appearance:
+  vibrancy: 0.3
+  arrow_color: [0.95, 0.15, 0.15]
+  species:
+    Sn: { color: [0.40, 0.50, 0.55], radius: 1.40 }
+    Se: { color: [0.62, 0.36, 0.07], radius: 1.18 }
+
+camera:
+  # Clean top-down for a vacuum-padded 2D cell: look along the (001) plane
+  # normal (reciprocal direction). auto_frame fits the whole supercell.
+  mode: MILLER
+  miller: [0, 0, 1]
+  auto_frame: true
+  # (the fields below are only used by other camera modes; harmless here)
+  azimuth: 35.0
+  polar: 70.0
+  radius: 36.0
+  distance: 40.0
+  ortho_scale: 20.0
+  target_offset: [0.0, 0.0, 0.0]
+
+render:
+  preset: CYCLES_PBR       # render style (TOON / EEVEE_PBR / CYCLES_PBR)
+  device: CPU              # CPU | GPU | AUTO  (override at CLI: --device GPU)
+  gpu_backend: AUTO        # AUTO | OPTIX | CUDA  (only used when device != CPU)
+  lighting: SCIENTIFIC
+  eevee_samples: 64
+  cycles_samples: 96       # override at the CLI with --samples for quick tests
+  denoising: true
+  resolution_x: 1600
+  resolution_y: 1200
+  resolution_percentage: 100
+  transparent_background: false
+
+overlay:
+  show_overlay: true
+  show_mode_overlay: true
+  text_size: 36
+  text_color: [0.0, 0.0, 0.0]
+  background_color: [1.0, 1.0, 1.0, 0.7]
+
+loop:
+  frames_per_cycle: 48
+  fps: 30
+
+output:
+  directory: /tmp
+  format: PNG
+  path: /tmp/pv_snse2.png  # PNG still; override with -o on the CLI
+  animation: false         # false = single still of the current frame
+  # For a video instead, set:  format: MP4   animation: true
+  # then render with:  pv_render.py job_snse2.yaml -o snse2.mp4
+  # (renders loop.frames_per_cycle frames at loop.fps, assembled via ffmpeg)

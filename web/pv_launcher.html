@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<!-- pv-serve launcher (0.6.83) — self-contained: inline <style> + <script>, no external
+     script src / stylesheet link, so it renders offline when served by pv-serve. It posts
+     a multipart upload to /build (the 0.6.58 endpoint) using EXACTLY the server field
+     names band/mesh/total_dos/proj_dos/pdos_conf/engine_yaml/force_constants +
+     group_a/dim/grid, then logs the built page on {ok:true}. Staging phonopy.yaml turns
+     the build ENGINE-EXACT (0.6.80 exporter --engine: provenance + clickable BZ nodes);
+     all validation strictness lives in the exporter, not here. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>phonon-vision — build a navigator</title>
+<style>
+  /* dark palette + font stack pulled from web/index.html so the launcher reads as the
+     same app (--bg/--fg/--muted/--border/--btn-bg from the dark theme; --accent is the
+     navigator's MSU-green chrome). */
+  :root {
+    --bg:#0f1115; --fg:#e8e8e8; --muted:#9aa0a6; --panel-bg:#14171c;
+    --border:#2a2f37; --btn-bg:#1b1f26; --accent:#18453B; --accent-2:#14362E;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         margin: 0; color: var(--fg); background: var(--bg);
+         min-height: 100vh; display: flex; justify-content: center; }
+  #pv-rail { width: 460px; max-width: 100%; padding: 22px 20px 28px; }
+  #pv-head { border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px; }
+  #pv-head h1 { margin: 0; font-size: 18px; }
+  #pv-head p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+  .pv-section-title { font-weight: 700; font-size: 13px; color: var(--fg);
+                      margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .03em; }
+  /* per-slot drop-zone: a label (click-to-pick the hidden input) that is also a
+     dragover/drop target assigning the dropped file to ITS OWN slot. */
+  .pv-slot { display: block; border: 1px dashed var(--border); border-radius: 8px;
+             padding: 8px 10px; margin: 6px 0; cursor: pointer; background: var(--panel-bg); }
+  .pv-slot.pv-drag { border-color: var(--accent); background: var(--accent-2); }
+  .pv-slot .pv-slot-title { font-size: 13px; }
+  .pv-slot .pv-req { color: var(--accent); font-weight: 600; }
+  .pv-slot .pv-opt { color: var(--muted); }
+  .pv-echo { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px;
+             font-family: ui-monospace, Menlo, monospace; white-space: nowrap;
+             overflow: hidden; text-overflow: ellipsis; }
+  .pv-echo.pv-set { color: var(--fg); }
+  .pv-field { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; }
+  .pv-field label { width: 9em; color: var(--muted); }
+  .pv-field input, .pv-field select {
+    font: inherit; padding: 3px 7px; border: 1px solid var(--border); border-radius: 5px;
+    background: var(--btn-bg); color: var(--fg); }
+  .pv-field input[type=number] { width: 6em; }
+  #pv-go { margin-top: 16px; width: 100%; font: inherit; font-weight: 600; padding: 9px;
+           border: 1px solid var(--accent); border-radius: 6px; background: var(--accent);
+           color: #fff; cursor: pointer; }
+  #pv-go:hover { background: var(--accent-2); }
+  #pv-status { margin-top: 10px; min-height: 1.3em; font-size: 12.5px; color: var(--muted); }
+  .pv-disabled { opacity: .45; pointer-events: none; }  /* greys + blocks drops on the mesh zone */
+  #pv-go:disabled, #pv-mesh:disabled, #pv-grid:disabled { opacity: .5; cursor: not-allowed; }
+  #pv-status.pv-error { color: #ff8a80; white-space: normal; }   /* readable, wraps long messages */
+  #pv-results { margin-top: 12px; }
+  .pv-result { border: 1px solid var(--border); border-left: 3px solid var(--accent);
+               border-radius: 6px; padding: 8px 10px; margin: 8px 0; background: var(--panel-bg); }
+  .pv-result-summary { font-size: 12.5px; color: var(--fg); }
+  .pv-result-path { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;
+                    color: var(--muted); margin: 3px 0; word-break: break-all; }
+  .pv-result-link { display: inline-block; font-size: 12.5px; color: var(--accent);
+                    text-decoration: none; font-weight: 600; }
+  .pv-result-link:hover { text-decoration: underline; }
+  .pv-result-ts { font-size: 11px; color: var(--muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+  <main id="pv-rail">
+    <div id="pv-head">
+      <h1>phonon-vision</h1>
+      <p>Drop your phonopy outputs and build a self-contained navigator page.</p>
+    </div>
+
+    <div class="pv-section-title">Inputs</div>
+
+    <label class="pv-slot" data-slot="band">
+      <input type="file" id="pv-band" hidden>
+      <span class="pv-slot-title">band <code>.hdf5</code> <span class="pv-req">(required)</span></span>
+      <span class="pv-echo" id="pv-band-echo">drop a file or click to choose</span>
+    </label>
+
+    <label class="pv-slot" data-slot="mesh">
+      <input type="file" id="pv-mesh" hidden>
+      <span class="pv-slot-title">mesh <code>.hdf5</code> <span class="pv-opt">(optional — 2D materials only (dim 2); builds the bands-over-BZ surface. Ignored for dim 3; not needed in engine mode (phonopy.yaml + FORCE_CONSTANTS build the exact surface).)</span></span>
+      <span class="pv-echo" id="pv-mesh-echo">drop a file or click to choose</span>
+    </label>
+
+    <label class="pv-slot" data-slot="total_dos">
+      <input type="file" id="pv-total-dos" hidden>
+      <span class="pv-slot-title">total DOS <code>.dat</code> <span class="pv-opt">(optional)</span></span>
+      <span class="pv-echo" id="pv-total-dos-echo">drop a file or click to choose</span>
+    </label>
+
+    <label class="pv-slot" data-slot="proj_dos">
+      <input type="file" id="pv-proj-dos" hidden>
+      <span class="pv-slot-title">projected DOS <code>.dat</code> <span class="pv-opt">(optional)</span></span>
+      <span class="pv-echo" id="pv-proj-dos-echo">drop a file or click to choose</span>
+    </label>
+
+    <label class="pv-slot" data-slot="pdos_conf">
+      <input type="file" id="pv-pdos-conf" hidden>
+      <span class="pv-slot-title">pdos <code>.conf</code> <span class="pv-opt">(optional)</span></span>
+      <span class="pv-echo" id="pv-pdos-conf-echo">drop a file or click to choose</span>
+    </label>
+
+    <div class="pv-section-title">Engine (optional — exact D(q) surface + click-anywhere animation)</div>
+
+    <label class="pv-slot" data-slot="engine_yaml">
+      <input type="file" id="pv-engine-yaml" hidden>
+      <span class="pv-slot-title"><code>phonopy.yaml</code> <span class="pv-opt">(optional — engine mode: band+surface evaluated exactly from force constants; adds provenance + clickable BZ nodes)</span></span>
+      <span class="pv-echo" id="pv-engine-yaml-echo">drop a file or click to choose</span>
+    </label>
+
+    <label class="pv-slot" data-slot="force_constants">
+      <input type="file" id="pv-force-constants" hidden>
+      <span class="pv-slot-title"><code>FORCE_CONSTANTS</code> <span class="pv-opt">(optional — text or .hdf5; not needed if phonopy.yaml embeds them)</span></span>
+      <span class="pv-echo" id="pv-force-constants-echo">drop a file or click to choose</span>
+    </label>
+
+    <div class="pv-section-title">Options</div>
+
+    <div class="pv-field">
+      <label for="pv-group-a">group A</label>
+      <input type="text" id="pv-group-a" value="Sn">
+    </div>
+    <div class="pv-field">
+      <label for="pv-dim">dimensionality</label>
+      <select id="pv-dim">
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+    </div>
+    <div class="pv-field">
+      <label for="pv-grid">surface grid</label>
+      <input type="number" id="pv-grid" value="96" min="8">
+    </div>
+
+    <button id="pv-go">Build navigator</button>
+    <div id="pv-status"></div>
+    <div id="pv-results"></div>
+  </main>
+
+<script>
+// 0.6.61 pv-serve launcher logic — self-contained; talks to /build only.
+(function () {
+  // server field name -> the file input's element id (underscores become hyphens in ids)
+  var SLOTS = [
+    { key: "band",      id: "pv-band" },
+    { key: "mesh",      id: "pv-mesh" },
+    { key: "total_dos", id: "pv-total-dos" },
+    { key: "proj_dos",  id: "pv-proj-dos" },
+    { key: "pdos_conf", id: "pv-pdos-conf" },
+    // 0.6.83 engine mode — NOT gated by dim (the engine band evaluation +
+    // provenance are dimension-agnostic; the surface/mesh_modes gate lives in
+    // the exporter). No validation here beyond the server's 400 — strictness
+    // lives in the exporter.
+    { key: "engine_yaml",     id: "pv-engine-yaml" },
+    { key: "force_constants", id: "pv-force-constants" }
+  ];
+
+  function setStatus(msg) { document.getElementById("pv-status").textContent = msg; }
+
+  // render a build-log entry and PREPEND it (newest on top). The link's href is EXACTLY
+  // the session url; we deliberately do NOT navigate the current tab — the link is a fresh
+  // user gesture (no popup blocking) and the launcher stays a record of every build.
+  function renderResult(url, summary) {
+    var results = document.getElementById("pv-results");
+    var entry = document.createElement("div");
+    entry.className = "pv-result";
+
+    var sum = document.createElement("div");
+    sum.className = "pv-result-summary";
+    sum.textContent = summary;
+
+    var path = document.createElement("div");
+    path.className = "pv-result-path";
+    path.textContent = url;
+
+    var link = document.createElement("a");
+    link.className = "pv-result-link";
+    link.setAttribute("href", url);          // exactly data.url
+    link.setAttribute("target", "_blank");
+    link.setAttribute("rel", "noopener");
+    link.textContent = "Open navigator \u2197";
+
+    var ts = document.createElement("div");
+    ts.className = "pv-result-ts";
+    ts.textContent = new Date().toLocaleTimeString();
+
+    entry.appendChild(sum);
+    entry.appendChild(path);
+    entry.appendChild(link);
+    entry.appendChild(ts);
+    results.insertBefore(entry, results.firstChild);
+  }
+
+  function showError(msg) {
+    var st = document.getElementById("pv-status");
+    st.textContent = msg;
+    st.classList.add("pv-error");
+  }
+
+  function echoFor(id) { return document.getElementById(id + "-echo"); }
+
+  function refreshEcho(slot) {
+    var inp = document.getElementById(slot.id);
+    var echo = echoFor(slot.id);
+    if (inp.files && inp.files.length) {
+      echo.textContent = inp.files[0].name;
+      echo.classList.add("pv-set");
+    } else {
+      echo.textContent = "drop a file or click to choose";
+      echo.classList.remove("pv-set");
+    }
+    updateGoState();   // staging/clearing band toggles GO live
+  }
+
+  // GO is enabled only once a band file is staged (starts DISABLED at init)
+  function updateGoState() {
+    var band = document.getElementById("pv-band");
+    document.getElementById("pv-go").disabled = !(band.files && band.files.length);
+  }
+
+  // dim-3 is mesh-free and grid is inert: disable + grey those inputs; dim-2 re-enables all
+  function updateDimCoupling() {
+    var three = document.getElementById("pv-dim").value === "3";
+    document.getElementById("pv-mesh").disabled = three;
+    document.getElementById("pv-grid").disabled = three;
+    var meshZone = document.querySelector('.pv-slot[data-slot="mesh"]');
+    if (three) meshZone.classList.add("pv-disabled");
+    else meshZone.classList.remove("pv-disabled");
+  }
+
+  // wire each slot: change echo on pick, and per-slot drag/drop (assigns to its OWN input)
+  SLOTS.forEach(function (slot) {
+    var inp = document.getElementById(slot.id);
+    var zone = document.querySelector('.pv-slot[data-slot="' + slot.key + '"]');
+    inp.addEventListener("change", function () { refreshEcho(slot); });
+    zone.addEventListener("dragover", function (e) { e.preventDefault(); zone.classList.add("pv-drag"); });
+    zone.addEventListener("dragleave", function () { zone.classList.remove("pv-drag"); });
+    zone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      zone.classList.remove("pv-drag");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        inp.files = e.dataTransfer.files;   // assign the dropped file to THIS slot only
+        refreshEcho(slot);
+      }
+    });
+  });
+
+  document.getElementById("pv-go").addEventListener("click", async function () {
+    var band = document.getElementById("pv-band");
+    if (!band.files || !band.files.length) {
+      setStatus("band .hdf5 is required");
+      return;
+    }
+    // present-only FormData: mirror the server's "missing optional files are fine" argv contract.
+    // dim-3 is mesh-free and grid is inert -> append neither (matches the terminal dim-3 command).
+    var dim = document.getElementById("pv-dim").value;
+    var groupA = document.getElementById("pv-group-a").value;
+    var fd = new FormData();
+    var optsSent = [];
+    SLOTS.forEach(function (slot) {
+      if (dim === "3" && slot.key === "mesh") return;
+      var inp = document.getElementById(slot.id);
+      if (inp.files && inp.files.length) {
+        fd.append(slot.key, inp.files[0]);
+        // summary: engine_yaml reads "+engine"; force_constants is part of the
+        // engine staging (an FC alone is the server's named 400), not its own tag
+        if (slot.key === "engine_yaml") optsSent.push("engine");
+        else if (slot.key !== "band" && slot.key !== "force_constants") optsSent.push(slot.key);
+      }
+    });
+    fd.append("group_a", groupA);
+    fd.append("dim", dim);
+    if (dim !== "3") fd.append("grid", document.getElementById("pv-grid").value);
+
+    // human-readable summary of exactly what was sent (grid only when dim-2)
+    var parts = [band.files[0].name, "group_a=" + groupA, "dim=" + dim];
+    if (dim !== "3") parts.push("grid=" + document.getElementById("pv-grid").value);
+    optsSent.forEach(function (k) { parts.push("+" + k); });
+    var summary = parts.join("  \u00b7  ");
+
+    setStatus("building\u2026");
+    document.getElementById("pv-status").classList.remove("pv-error");
+    try {
+      var res = await fetch("/build", { method: "POST", body: fd });
+      var data = await res.json();
+      if (data && data.ok) {
+        renderResult(data.url, summary);   // log the build; do NOT navigate the current tab
+        setStatus("");                     // finished — the entry holds the open link
+      } else {
+        showError((data && data.error) ? data.error : "build failed");
+      }
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+
+  document.getElementById("pv-dim").addEventListener("change", updateDimCoupling);
+  updateGoState();        // GO starts disabled until a band file is staged
+  updateDimCoupling();    // reflect the initial dim (2) -> mesh/grid enabled
+})();
+</script>
+</body>
+</html>

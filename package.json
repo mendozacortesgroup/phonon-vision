@@ -1,0 +1,14 @@
+{
+  "name": "phonon-vision-web-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dev-only test harness for the phonon-vision navigator viewer (web/). The kinematics gate is zero-dependency; only the DOM-load smoke test needs jsdom.",
+  "scripts": {
+    "test": "node --test tests-js/kinematics.test.mjs tests-js/navigator_dom.test.mjs",
+    "test:kinematics": "node --test tests-js/kinematics.test.mjs",
+    "test:dom": "node --test tests-js/navigator_dom.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

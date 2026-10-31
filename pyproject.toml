@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phonon-vision"
+version = "3.6.0"
+description = "Phonon analysis and visualization: a physics-accurate data layer, a single-file web navigator, and thermal/structural analysis on a common ground"
+readme = "PACKAGE.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Axel Melchor Gaona Carranza" },
+    { name = "Marcus Djokic" },
+    { name = "Daniel Maldonado-Lopez" },
+    { name = "Jose L. Mendoza-Cortes" }
+]
+keywords = ["phonon", "lattice dynamics", "phonopy", "visualization",
+            "crystallography", "ADP", "thermal ellipsoid"]
+dependencies = [
+    "numpy>=1.20",
+    "pyyaml>=5.4",
+    # h5py stays OPTIONAL — needed only to load .hdf5 inputs. The parsers
+    # raise a clear ImportError if HDF5 is attempted without it.
+]
+
+[project.optional-dependencies]
+hdf5 = ["h5py>=3.0"]
+unfolding = ["phonopy>=4.1"]
+# the A1 D(q) engine (engine/dq_phonopy.py) drives phonopy's API to evaluate
+# the dynamical matrix at arbitrary q — optional, never a hard dependency.
+engine = ["phonopy>=4.1"]
+# the navigator exporter (tools/pv_navigator_export.py) needs scipy
+# (LinearNDInterpolator; also bz.first_brillouin_zone_2d's Voronoi) and
+# matplotlib (path.Path BZ mask).
+export = ["scipy>=1.8", "matplotlib>=3.5"]
+# everything needed to run the full battery
+dev = ["pytest>=7", "jsonschema>=4", "h5py>=3.0", "scipy>=1.8",
+       "matplotlib>=3.5", "phonopy>=4.1"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+phonon_core = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Tier-3 real-data tests skip without their fixture trees; that is by design.
+# A HEALTHY run reports skips — an unexpected skip COUNT means a battery has
+# gone dark. See PACKAGE.md.
+filterwarnings = ["ignore::DeprecationWarning"]

@@ -1,0 +1,106 @@
+{
+  "fixture_version": 1,
+  "phonon_core_version": "0.2.0",
+  "source_file": "2d_WSe2_band.hdf5",
+  "source_sha256": "d36a4d77bd144278bec272f463f5535b0b31672961286bdb7d79f176bd796c98",
+  "material_symbols": [
+    "W",
+    "Se",
+    "Se"
+  ],
+  "inputs": {
+    "amplitude": 1.5,
+    "phi": 0.7,
+    "supercell": [
+      2,
+      2,
+      1
+    ],
+    "n_frames": 16,
+    "mass_weighted": true
+  },
+  "conventions": {
+    "displacement_formula": "u_{ls}(phi) = A * Re[ e_s * exp(i (q.R_l + phi)) ] / sqrt(m_s)",
+    "mass_weighting": "displacement divided by sqrt(m_s); masses in AMU",
+    "canonical_phase": "rotate the eigenvector by a global e^{i alpha} so the largest-magnitude Cartesian component is real and positive",
+    "eigenvector_normalization": "sum_s |e_s|^2 = 1 (mass-weighted normal-mode convention)",
+    "q_convention": "fractional reciprocal-lattice coordinates; q.R = 2*pi * q_frac . n_int",
+    "bloch_phase": "2*pi * q_frac . n_int (n_int = integer cell index)",
+    "frequency_units": "THz, signed (negative = imaginary / soft mode)",
+    "phase_grid": "phi_k = linspace(0, 2*pi, n_frames, endpoint=False); frame 0 is phi=0",
+    "snapshot_phase_phi": "disp_phi arrays are at the single fixed phase PHI (radians)",
+    "eigenvector_layout": "(N_atoms, 3) complex128, Cartesian, per primitive-cell atom"
+  },
+  "modes": {
+    "gamma_acoustic": {
+      "q_index": 0,
+      "band_index": 2,
+      "q_point": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frequency_THz": 0.00020231264556478559,
+      "is_imaginary": false,
+      "is_finite_q": false,
+      "n_atoms": 3,
+      "n_slots": 12
+    },
+    "gamma_optical": {
+      "q_index": 0,
+      "band_index": 8,
+      "q_point": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frequency_THz": 9.58788525689058,
+      "is_imaginary": false,
+      "is_finite_q": false,
+      "n_atoms": 3,
+      "n_slots": 12
+    },
+    "m_point": {
+      "q_index": 201,
+      "band_index": 3,
+      "q_point": [
+        0.5,
+        0.0,
+        0.0
+      ],
+      "frequency_THz": 6.177511750040187,
+      "is_imaginary": false,
+      "is_finite_q": true,
+      "n_atoms": 3,
+      "n_slots": 12
+    },
+    "k_point": {
+      "q_index": 403,
+      "band_index": 3,
+      "q_point": [
+        0.333333,
+        0.333333,
+        0.0
+      ],
+      "frequency_THz": 6.287851546790112,
+      "is_imaginary": false,
+      "is_finite_q": true,
+      "n_atoms": 3,
+      "n_slots": 12
+    },
+    "generic": {
+      "q_index": 100,
+      "band_index": 4,
+      "q_point": [
+        0.24875621890547264,
+        0.0,
+        0.0
+      ],
+      "frequency_THz": 6.650475143795425,
+      "is_imaginary": false,
+      "is_finite_q": true,
+      "n_atoms": 3,
+      "n_slots": 12
+    }
+  }
+}

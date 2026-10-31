@@ -1,0 +1,53 @@
+schema_version = "1.0.0"
+
+# Basic metadata
+id = "phonon_vision"
+version = "0.8.8"
+name = "Phonon Vision"
+tagline = "Visualize phonopy phonon modes with publication-quality renders"
+maintainer = "Melchor"
+type = "add-on"
+website = "https://github.com/melchor/phonon-vision"
+tags = ["3D View", "Animation", "Render"]
+
+blender_version_min = "4.5.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+
+# Bundled wheels — phonon-core + PyYAML + h5py for all platforms.
+# DUAL cp311 (Blender 4.5 LTS, Python 3.11) + cp313 (Blender 5.2 LTS, Python
+# 3.13) sets: Blender's extension platform filters wheels per interpreter at
+# install time (bl_extension_utils.py / blender_ext.py
+# python_versions_from_wheels + paths_filter_wheels_by_platform), so one
+# manifest correctly serves both LTS lines. blender_version_min stays 4.5.0.
+# macOS x86_64 minimum-deployment tag differs by cp-tag: cp311 wheels publish
+# macosx_10_9_x86_64, cp313 wheels publish macosx_10_13_x86_64 (CPython 3.13
+# raised its own macOS baseline) — see download_wheels.sh for the pin.
+wheels = [
+    "./wheels/phonon_core-0.2.1-py3-none-any.whl",
+    "./wheels/PyYAML-6.0.2-cp311-cp311-macosx_10_9_x86_64.whl",
+    "./wheels/PyYAML-6.0.2-cp311-cp311-macosx_11_0_arm64.whl",
+    "./wheels/PyYAML-6.0.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    "./wheels/PyYAML-6.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "./wheels/PyYAML-6.0.2-cp311-cp311-win_amd64.whl",
+    "./wheels/h5py-3.14.0-cp311-cp311-macosx_10_9_x86_64.whl",
+    "./wheels/h5py-3.14.0-cp311-cp311-macosx_11_0_arm64.whl",
+    "./wheels/h5py-3.14.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    "./wheels/h5py-3.14.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "./wheels/h5py-3.14.0-cp311-cp311-win_amd64.whl",
+    "./wheels/PyYAML-6.0.2-cp313-cp313-macosx_10_13_x86_64.whl",
+    "./wheels/PyYAML-6.0.2-cp313-cp313-macosx_11_0_arm64.whl",
+    "./wheels/PyYAML-6.0.2-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    "./wheels/PyYAML-6.0.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "./wheels/PyYAML-6.0.2-cp313-cp313-win_amd64.whl",
+    "./wheels/h5py-3.14.0-cp313-cp313-macosx_10_13_x86_64.whl",
+    "./wheels/h5py-3.14.0-cp313-cp313-macosx_11_0_arm64.whl",
+    "./wheels/h5py-3.14.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    "./wheels/h5py-3.14.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "./wheels/h5py-3.14.0-cp313-cp313-win_amd64.whl",
+]
+
+platforms = ["linux-x64", "linux-arm64", "macos-x64", "macos-arm64", "windows-x64"]
+
+[permissions]
+files = "Read phonopy band/mesh files and write rendered animations"

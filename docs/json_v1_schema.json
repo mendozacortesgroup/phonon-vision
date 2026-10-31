@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://phonon-vision/schemas/json_v1_schema.json",
+  "title": "phonon-core JSON v1 (base layer)",
+  "description": "One Material + optional BandPath + optional MeshGrid + metadata. v1.0 core LOCKED; 1.1.0 adds the ADDITIVE extensions.engine provenance block. Extensions are allowed (additionalProperties) and unknown ones are ignored by base-layer readers.",
+  "type": "object",
+  "required": ["schema_version", "generator", "conventions", "core"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semver. Readers accept unknown MINOR/PATCH within MAJOR 1; reject unknown MAJOR."
+    },
+    "generator": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"}
+      }
+    },
+    "conventions": {
+      "type": "object",
+      "description": "Mandatory. All eight keys must be present.",
+      "required": [
+        "frequency_units",
+        "eigenvector_normalization",
+        "q_point_format",
+        "lattice_vectors",
+        "dynamical_matrix_fourier",
+        "nac_method",
+        "source_code",
+        "source_version"
+      ],
+      "properties": {
+        "frequency_units": {"type": "string", "enum": ["THz"]},
+        "eigenvector_normalization": {"type": "string", "enum": ["mass_weighted"]},
+        "q_point_format": {"type": "string", "enum": ["fractional"]},
+        "lattice_vectors": {"type": "string", "enum": ["rows"]},
+        "dynamical_matrix_fourier": {
+          "type": ["string", "null"],
+          "enum": ["with_tau", "without_tau", null]
+        },
+        "nac_method": {
+          "type": "string",
+          "enum": ["none", "gonze", "wang"]
+        },
+        "source_code": {"type": "string"},
+        "source_version": {"type": ["string", "null"]}
+      }
+    },
+    "metadata": {"type": "object"},
+    "core": {
+      "type": "object",
+      "required": ["material"],
+      "properties": {
+        "material": {"$ref": "#/definitions/material"},
+        "band": {"oneOf": [{"type": "null"}, {"$ref": "#/definitions/band"}]},
+        "mesh": {"oneOf": [{"type": "null"}, {"$ref": "#/definitions/mesh"}]}
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Reserved future namespace. Documented in the schema doc; base-layer readers MUST ignore unknown keys here. 'engine' (added 1.1.0) is evaluation provenance: core.band/core.mesh marked evaluated=true were COMPUTED by the named engine from the force constants identified by fc_md5.",
+      "additionalProperties": true,
+      "properties": {
+        "engine": {
+          "type": "object",
+          "description": "Evaluation provenance (1.1.0). Required: kind, evaluated. additionalProperties true INSIDE engine per the semver minor-compat contract (a 1.2.0 file that grows the block must not break 1.1.0 readers).",
+          "required": ["kind", "evaluated"],
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Engine identifier, e.g. 'phonopy-A1' (engine/dq_phonopy.py); 'numpy-A2' later."
+            },
+            "evaluated": {
+              "type": "object",
+              "required": ["band", "mesh"],
+              "properties": {
+                "band": {"type": "boolean"},
+                "mesh": {"type": "boolean"}
+              }
+            },
+            "phonopy_version": {"type": ["string", "null"]},
+            "fc_md5": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{32}$",
+              "description": "md5 of FORCE_CONSTANTS, 32 lowercase hex, or null"
+            },
+            "phonopy_yaml_md5": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{32}$"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "matrix": {
+      "type": "array",
+      "items": {"type": "array", "items": {"type": "number"}}
+    },
+    "tensor3": {
+      "type": "array",
+      "items": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}}
+    },
+    "tensor4": {
+      "type": "array",
+      "items": {"type": "array", "items": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}}}
+    },
+    "material": {
+      "type": "object",
+      "required": ["lattice", "symbols", "masses", "fractional_coords"],
+      "properties": {
+        "lattice": {
+          "$ref": "#/definitions/matrix",
+          "description": "3x3, rows are a1,a2,a3 (Angstrom)"
+        },
+        "symbols": {"type": "array", "items": {"type": "string"}},
+        "masses": {"type": "array", "items": {"type": "number"}},
+        "fractional_coords": {"$ref": "#/definitions/matrix"},
+        "positions_were_wrapped": {"type": "boolean"}
+      }
+    },
+    "band": {
+      "type": "object",
+      "required": ["storage", "q_points", "distances", "segment_nqpoint", "labels", "frequencies"],
+      "properties": {
+        "storage": {"type": "string", "enum": ["inline", "sidecar"]},
+        "q_points": {"$ref": "#/definitions/matrix"},
+        "distances": {"type": "array", "items": {"type": "number"}},
+        "segment_nqpoint": {"type": "array", "items": {"type": "integer"}},
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "frequencies": {
+          "$ref": "#/definitions/matrix",
+          "description": "[n_q][n_branch], THz"
+        },
+        "eigenvectors_real": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/definitions/tensor4"}],
+          "description": "[n_q][n_branch][n_atom][3] or null"
+        },
+        "eigenvectors_imag": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/definitions/tensor4"}]
+        }
+      }
+    },
+    "mesh": {
+      "type": "object",
+      "required": ["storage", "mesh", "q_points", "frequencies"],
+      "properties": {
+        "storage": {"type": "string", "enum": ["inline", "sidecar"]},
+        "mesh": {
+          "type": "array",
+          "items": {"type": "integer"},
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "q_points": {"$ref": "#/definitions/matrix"},
+        "weights": {
+          "oneOf": [{"type": "null"}, {"type": "array", "items": {"type": "integer"}}]
+        },
+        "frequencies": {"$ref": "#/definitions/matrix"},
+        "eigenvectors_real": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/definitions/tensor4"}]
+        },
+        "eigenvectors_imag": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/definitions/tensor4"}]
+        }
+      }
+    }
+  }
+}
